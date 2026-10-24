@@ -1,0 +1,37 @@
+name: Build Windows VST3
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -A x64
+
+      - name: Build plugin and tests
+        run: cmake --build build --config Release --parallel
+
+      - name: Run DSP tests
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path test-out | Out-Null
+          & "build/Release/voxform_dsp_test.exe" test-out
+
+      - name: Collect build output
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Recurse "build/Voxform_artefacts/Release/VST3/Voxform.vst3" "dist/Voxform.vst3"
+          Copy-Item "build/Voxform_artefacts/Release/Standalone/Voxform.exe" "dist/Voxform.exe"
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Voxform-Windows-x64
+          path: dist
